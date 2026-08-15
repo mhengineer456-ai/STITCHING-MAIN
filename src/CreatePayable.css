@@ -1,0 +1,1066 @@
+/* CreatePayable.css - Modern & Attractive Design */
+
+/* Main Container */
+.create-payable-container {
+  max-width: 2200px;
+  margin: 0 auto;
+  padding: 24px;
+  background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ============================================ */
+/* HEADER SECTION - Modern Gradient Header */
+/* ============================================ */
+.create-payable-header {
+  background: linear-gradient(135deg, #0F172A 0%, #1E40AF 50%, #2563EB 100%);
+  border-radius: 24px;
+  padding: 24px 32px;
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.create-payable-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 60%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  transform: rotate(25deg);
+  pointer-events: none;
+}
+
+.create-payable-header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  z-index: 1;
+}
+
+.create-payable-back-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 10px 20px;
+  border-radius: 40px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.create-payable-back-button:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateX(-3px);
+}
+
+.create-payable-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: white;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.5px;
+}
+
+.create-payable-subtitle {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.create-payable-header-right {
+  z-index: 1;
+}
+
+.create-payable-supervisor-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 10px 20px;
+  border-radius: 60px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.create-payable-supervisor-avatar {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #ffd89b 0%, #c7e9fb 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+  color: #1e3c72;
+}
+
+.create-payable-supervisor-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.create-payable-supervisor-label {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.create-payable-supervisor-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+}
+
+/* ============================================ */
+/* ALERT BANNERS */
+/* ============================================ */
+.create-payable-warning-alert,
+.create-payable-error-alert,
+.create-payable-success-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  animation: slideDown 0.4s ease-out;
+  font-weight: 500;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.create-payable-warning-alert {
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  color: #92400e;
+}
+
+.create-payable-success-alert {
+  background: #d1fae5;
+  border-left: 4px solid #10b981;
+  color: #065f46;
+}
+
+.create-payable-error-alert {
+  background: #fee2e2;
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
+}
+
+.create-payable-alert-icon {
+  font-size: 20px;
+}
+
+/* ============================================ */
+/* MODULE NAVIGATION TABS */
+/* ============================================ */
+.create-payable-module-nav {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 32px;
+  background: white;
+  padding: 8px;
+  border-radius: 60px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  width: fit-content;
+}
+
+.create-payable-module-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px;
+  border: none;
+  background: transparent;
+  border-radius: 40px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.create-payable-module-button.active {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  box-shadow: 0 8px 20px -6px rgba(30, 60, 114, 0.4);
+}
+
+.create-payable-module-button:hover:not(.active) {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.create-payable-module-icon {
+  font-size: 18px;
+}
+
+/* ============================================ */
+/* MAIN CONTENT AREA */
+/* ============================================ */
+.create-payable-content {
+  background: transparent;
+}
+
+.create-payable-module-content {
+  background: transparent;
+}
+
+/* ============================================ */
+/* PAYABLE TYPE SELECTION - BEAUTIFUL CARDS */
+/* ============================================ */
+.create-payable-type-section {
+  margin-bottom: 32px;
+}
+
+.create-payable-section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 20px;
+  padding-left: 8px;
+  border-left: 4px solid #2a5298;
+}
+
+.create-payable-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.create-payable-type-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: white;
+  border-radius: 24px;
+  border: 2px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.create-payable-type-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 30px -12px rgba(0, 0, 0, 0.15);
+  border-color: #cbd5e1;
+}
+
+.create-payable-type-card.active {
+  border-color: #2a5298;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  box-shadow: 0 10px 25px -5px rgba(42, 82, 152, 0.2);
+}
+
+.create-payable-type-icon {
+  font-size: 42px;
+}
+
+.create-payable-type-info {
+  flex: 1;
+}
+
+.create-payable-type-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: #00245e;
+  margin: 0 0 4px 0;
+}
+
+.create-payable-type-desc {
+  font-size: 13px;
+  color: #000000;
+  margin: 0;
+}
+
+/* ============================================ */
+/* FORM CONTAINER - TWO COLUMN LAYOUT */
+/* ============================================ */
+.create-payable-form-container {
+  display: grid;
+  grid-template-columns: 1.1fr 1.2fr;
+  gap: 28px;
+  margin-bottom: 32px;
+}
+
+@media (max-width: 900px) {
+  .create-payable-form-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================ */
+/* CARDS */
+/* ============================================ */
+.create-payable-card {
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 28px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.create-payable-card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.create-payable-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.create-payable-card-title::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  border-radius: 4px;
+}
+
+.create-payable-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.create-payable-card-header .create-payable-card-title {
+  margin-bottom: 0;
+}
+
+/* ============================================ */
+/* FORM FIELDS */
+/* ============================================ */
+.create-payable-field {
+  margin-bottom: 20px;
+}
+
+.create-payable-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #000000;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.create-payable-required {
+  color: #ef4444;
+  margin-left: 4px;
+}
+
+.create-payable-input,
+.create-payable-select,
+.create-payable-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
+  font-size: 14px;
+  color: #000000;
+  transition: all 0.3s ease;
+  background: #f8fafc;
+}
+
+.create-payable-input:focus,
+.create-payable-select:focus,
+.create-payable-textarea:focus {
+  outline: none;
+  border-color: #2a5298;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.1);
+}
+
+/* ============================================ */
+/* SHADE LIST - BEAUTIFUL ACCORDION */
+/* ============================================ */
+.create-payable-shade-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.create-payable-shade-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.create-payable-shade-list::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.create-payable-shade-list::-webkit-scrollbar-thumb {
+  background: #2a5298;
+  border-radius: 10px;
+}
+
+.create-payable-shade-item-wrapper {
+  margin-bottom: 12px;
+}
+
+.create-payable-shade-item {
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 2px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.create-payable-shade-item.selected {
+  border-color: #2a5298;
+  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+}
+
+.create-payable-shade-item-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.create-payable-shade-item-header input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #2a5298;
+}
+
+.create-payable-shade-name {
+  flex: 1;
+  font-weight: 700;
+  color: #1e3c72;
+}
+
+.create-payable-completed-badge {
+  background: #d1fae5;
+  color: #065f46;
+  padding: 4px 10px;
+  border-radius: 30px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.create-payable-expand-icon {
+  color: #000000;
+  font-size: 12px;
+}
+
+.create-payable-lot-selection-section {
+  padding: 12px 16px 16px 48px;
+  border-top: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 0 0 16px 16px;
+}
+
+.create-payable-lot-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.create-payable-lot-checkbox-item:hover {
+  background: #f1f5f9;
+}
+
+.create-payable-lot-checkbox-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #2a5298;
+}
+
+.create-payable-lot-checkbox-label {
+  font-size: 13px;
+  color: #00347e;
+  font-weight: 500;
+}
+
+/* ============================================ */
+/* SELECT ALL BUTTON */
+/* ============================================ */
+.create-payable-select-all-button {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 40px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.create-payable-select-all-button:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(42, 82, 152, 0.3);
+}
+
+/* ============================================ */
+/* CREATE PAYMENT BUTTON */
+/* ============================================ */
+.create-payable-selected-summary {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 2px dashed #e2e8f0;
+}
+
+.create-payable-create-payment-button {
+  width: 100%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.create-payable-create-payment-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4);
+}
+
+/* ============================================ */
+/* PAYMENT SECTION FORM */
+/* ============================================ */
+.create-payable-payment-section {
+  background: white;
+  border-radius: 24px;
+  padding: 28px;
+  margin-top: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.create-payable-payment-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 600px) {
+  .create-payable-payment-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.create-payable-form-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+}
+
+.create-payable-cancel-button {
+  background: #f1f5f9;
+  color: #475569;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 40px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.create-payable-cancel-button:hover {
+  background: #e2e8f0;
+}
+
+.create-payable-submit-button {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 40px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.create-payable-submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(30, 60, 114, 0.4);
+}
+
+.create-payable-submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ============================================ */
+/* FILTERS BAR */
+/* ============================================ */
+.create-payable-filters-bar {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.create-payable-filters-bar input,
+.create-payable-filters-bar select {
+  padding: 12px 20px;
+  border: 2px solid #e2e8f0;
+  border-radius: 40px;
+  font-size: 14px;
+  background: white;
+  min-width: 200px;
+}
+
+.create-payable-filters-bar input:focus,
+.create-payable-filters-bar select:focus {
+  outline: none;
+  border-color: #2a5298;
+}
+
+/* ============================================ */
+/* TABLE STYLES */
+/* ============================================ */
+.create-payable-table-container {
+  background: white;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.create-payable-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+/* Searchable Dropdown Styles */
+.create-payable-searchable-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.create-payable-search-input {
+  width: 100%;
+  padding-right: 30px !important;
+}
+
+.create-payable-clear-search {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #999;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.create-payable-clear-search:hover {
+  background-color: #f0f0f0;
+  color: #666;
+}
+
+.create-payable-dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-top: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.create-payable-dropdown-item {
+  padding: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.create-payable-dropdown-item:hover {
+  background-color: #f5f5f5;
+}
+
+.create-payable-dropdown-item-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.create-payable-dropdown-id {
+  font-weight: 600;
+  color: #1a56db;
+  font-size: 14px;
+  background-color: #e8f0fe;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.create-payable-dropdown-name {
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.create-payable-dropdown-details {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #666;
+}
+
+.create-payable-dropdown-lots {
+  background-color: #f0fdf4;
+  color: #15803d;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.create-payable-dropdown-amount {
+  background-color: #fef3c7;
+  color: #b45309;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.create-payable-dropdown-no-results {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+/* Table format for Completed Work by Shade */
+.create-payable-shade-table-container {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.create-payable-shade-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.create-payable-shade-table th,
+.create-payable-shade-table td {
+  border: 1px solid #e2e8f0;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.create-payable-shade-table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.create-payable-shade-table-row.selected {
+  background-color: #eef2ff;
+}
+
+.create-payable-table-checkbox {
+  text-align: center;
+  width: 40px;
+}
+
+.create-payable-table-checkbox input {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.create-payable-shade-name-cell {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.create-payable-lot-numbers-cell {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.create-payable-quantity-cell,
+.create-payable-rate-cell,
+.create-payable-amount-cell {
+  text-align: right;
+}
+
+.create-payable-expand-cell {
+  text-align: center;
+  width: 50px;
+}
+
+.create-payable-expand-table-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s;
+}
+
+.create-payable-expand-table-button:hover {
+  background-color: #e2e8f0;
+}
+
+/* Expanded lots sub-table */
+.create-payable-lots-expanded-row {
+  background-color: #f8fafc;
+}
+
+.create-payable-lots-expanded-row td {
+  padding: 0;
+}
+
+.create-payable-lots-table-container {
+  padding: 1rem;
+  background-color: #f1f5f9;
+}
+
+.create-payable-lots-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.813rem;
+}
+
+.create-payable-lots-table th,
+.create-payable-lots-table td {
+  border: 1px solid #cbd5e1;
+  padding: 0.5rem;
+  text-align: center;
+  
+}
+
+.create-payable-lots-table th {
+  background-color: #003170;
+  font-weight: 500;
+  color: white;
+}
+
+.create-payable-lots-table td {
+  background-color: #ffffff;
+}
+
+.create-payable-lots-table td:not(.create-payable-table-checkbox) {
+  text-align: center;
+}
+
+.create-payable-lots-table td.create-payable-table-checkbox {
+  text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .create-payable-shade-table th,
+  .create-payable-shade-table td {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .create-payable-lots-table th,
+  .create-payable-lots-table td {
+    padding: 0.375rem;
+    font-size: 0.75rem;
+  }
+}
+
+.create-payable-table thead tr {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+}
+
+.create-payable-table th {
+  padding: 16px 20px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.create-payable-table td {
+  padding: 14px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 14px;
+}
+
+.create-payable-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.create-payable-table button {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.create-payable-table button:hover {
+  transform: scale(1.05);
+}
+
+/* ============================================ */
+/* MODAL OVERLAY */
+/* ============================================ */
+.create-payable-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.create-payable-modal {
+  background: white;
+  border-radius: 28px;
+  width: 90%;
+  max-width: 500px;
+  overflow: hidden;
+  animation: scaleIn 0.3s ease;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.create-payable-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+}
+
+.create-payable-modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.create-payable-modal-header button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.create-payable-modal-header button:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.create-payable-modal-content {
+  padding: 24px;
+}
+
+.create-payable-modal-content p {
+  margin: 12px 0;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+.create-payable-modal-content p strong {
+  color: #1e293b;
+  width: 120px;
+  display: inline-block;
+}
+
+/* ============================================ */
+/* UTILITY CLASSES */
+/* ============================================ */
+.create-payable-left-column,
+.create-payable-right-column {
+  display: flex;
+  flex-direction: column;
+}
