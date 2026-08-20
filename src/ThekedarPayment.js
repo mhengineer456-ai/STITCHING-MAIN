@@ -15,6 +15,12 @@ const isSameName = (name1, name2) => {
   return normalizeName(name1) === normalizeName(name2);
 };
 
+// Helper function for lot number normalization
+const normalizeLotNumber = (lotNo) => {
+  if (lotNo === null || lotNo === undefined) return '';
+  return lotNo.toString().trim().toLowerCase();
+};
+
 // Google Sheets configuration
 const GOOGLE_SHEETS_CONFIG = {
   API_KEY: "AIzaSyAomDFBkOySlIxKWSKGHe6ATv9gvaBr7uk",
@@ -121,54 +127,101 @@ export default function ThekedarPayment({ onBack, supervisor, onNavigate }) {
     }
   }, [karigarProfiles, selectedSupervisor]);
 
-  // Load Thekedar Payments to track already paid lots
-  const loadThekedarPayments = async () => {
+  // Recursively extract lot numbers from any parsed object or array
+  const extractLotNumbersFromObject = (obj, set) => {
+    if (!obj) return;
+    if (Array.isArray(obj)) {
+      obj.forEach(item => extractLotNumbersFromObject(item, set));
+    } else if (typeof obj === 'object') {
+      if (obj.lotNumber !== undefined && obj.lotNumber !== null) {
+        set.add(normalizeLotNumber(obj.lotNumber));
+      }
+      if (obj.lotNo !== undefined && obj.lotNo !== null) {
+        set.add(normalizeLotNumber(obj.lotNo));
+      }
+      if (obj.lots && Array.isArray(obj.lots)) {
+        obj.lots.forEach(item => extractLotNumbersFromObject(item, set));
+      }
+      if (obj.paidLots && Array.isArray(obj.paidLots)) {
+        obj.paidLots.forEach(l => set.add(normalizeLotNumber(l)));
+      }
+    }
+  };
+
+  // Strictly fetch paid lot numbers from all available columns and fields in ThekedarPayments sheet
+  const fetchPaidLotNumbers = async () => {
+    const paidLots = new Set();
     try {
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${THEKEDAR_PAYMENTS_CONFIG.SPREADSHEET_ID}/values/${THEKEDAR_PAYMENTS_CONFIG.RANGE}?key=${THEKEDAR_PAYMENTS_CONFIG.API_KEY}`;
       const response = await fetch(url);
       
       if (!response.ok) {
         console.warn('ThekedarPayments sheet not available');
-        setThekedarPayments([]);
-        return;
+        return paidLots;
       }
       
       const data = await response.json();
-      const paidLots = new Set();
 
       if (data.values && data.values.length > 1) {
-        const headers = data.values[0];
         const rows = data.values.slice(1);
         
-        let lotsDataIdx = headers.findIndex(h => h && h.toString().trim().toLowerCase() === 'lots data (json)');
-        if (lotsDataIdx === -1) {
-          lotsDataIdx = headers.findIndex(h => h && h.toString().trim().toLowerCase().includes('lots data'));
-        }
-        if (lotsDataIdx === -1) {
-          lotsDataIdx = 19; // Fallback to default index 19
-        }
-        
         rows.forEach(row => {
-          let lotsData = [];
-          try {
-            if (row && lotsDataIdx < row.length && row[lotsDataIdx]) {
-              lotsData = JSON.parse(row[lotsDataIdx]);
+          if (!row || row.length === 0) return;
+          
+          // 1. Parse JSON objects/arrays from all cells in the row
+          row.forEach(cell => {
+            if (!cell || typeof cell !== 'string') return;
+            const strCell = cell.trim();
+            if (strCell.startsWith('[') || strCell.startsWith('{')) {
+              try {
+                const parsed = JSON.parse(strCell);
+                extractLotNumbersFromObject(parsed, paidLots);
+              } catch (e) {
+                // Ignore non-JSON cell contents
+              }
             }
-          } catch (e) {
-            console.error('Error parsing lots data:', e);
+          });
+
+          // 2. Regex matching across row contents for lotNumber key values
+          const rowStr = row.join(' ');
+          const lotMatches = rowStr.matchAll(/"lotNumber"\s*:\s*"([^"]+)"/g);
+          for (const match of lotMatches) {
+            if (match[1]) paidLots.add(normalizeLotNumber(match[1]));
           }
           
-          if (lotsData && Array.isArray(lotsData)) {
-            lotsData.forEach(lot => {
-              if (lot.lotNumber) {
-                paidLots.add(lot.lotNumber.toString().trim());
+          const lotNumMatches = rowStr.matchAll(/"lotNumber"\s*:\s*(\d+)/g);
+          for (const match of lotNumMatches) {
+            if (match[1]) paidLots.add(normalizeLotNumber(match[1]));
+          }
+
+          // 3. Extract from description pattern (e.g. "Lots: 101, 102")
+          const descMatch = rowStr.match(/Lots:\s*([0-9a-zA-Z,\s-]+)/i);
+          if (descMatch && descMatch[1]) {
+            const lotsInDesc = descMatch[1].split(',');
+            lotsInDesc.forEach(l => {
+              const cleaned = normalizeLotNumber(l);
+              if (cleaned && !cleaned.includes('payment') && !cleaned.includes('under')) {
+                paidLots.add(cleaned);
               }
             });
           }
         });
-        
-        setPaidLotNumbers(paidLots);
-        console.log(`Loaded ${rows.length} payments, ${paidLots.size} unique lots already paid`);
+      }
+    } catch (err) {
+      console.error('Error fetching paid lot numbers:', err);
+    }
+    return paidLots;
+  };
+
+  // Load Thekedar Payments to track already paid lots
+  const loadThekedarPayments = async () => {
+    try {
+      const paidLots = await fetchPaidLotNumbers();
+      setPaidLotNumbers(paidLots);
+      console.log(`Loaded ${paidLots.size} unique lots already paid`);
+      
+      if (karigarAssignments.length > 0) {
+        analyzeLotCompletion(karigarAssignments, paidLots);
       }
     } catch (err) {
       console.error('Error loading Thekedar payments:', err);
@@ -218,7 +271,7 @@ export default function ThekedarPayment({ onBack, supervisor, onNavigate }) {
     }
   };
 
-  const analyzeLotCompletion = (assignments) => {
+  const analyzeLotCompletion = (assignments, paidLotsSet = paidLotNumbers) => {
     const lotMap = new Map();
     
     assignments.forEach(assignment => {
@@ -258,10 +311,11 @@ export default function ThekedarPayment({ onBack, supervisor, onNavigate }) {
     });
     
     lotMap.forEach((value) => {
+      const normLot = normalizeLotNumber(value.lotNumber);
       value.isFullyCompleted = value.shades.size === value.completedShades.size;
       value.completionPercentage = Math.round((value.completedShades.size / value.shades.size) * 100);
       value.totalKarigars = value.karigars.size;
-      value.isPaid = paidLotNumbers.has(value.lotNumber.toString().trim());
+      value.isPaid = paidLotsSet.has(normLot);
       
       const firstAssignment = value.assignments.find(a => a.status === 'completed') || value.assignments[0];
       if (firstAssignment) {
@@ -401,7 +455,12 @@ export default function ThekedarPayment({ onBack, supervisor, onNavigate }) {
         }
         
         setKarigarAssignments(assignments);
-        analyzeLotCompletion(assignments);
+        let currentPaidLots = paidLotNumbers;
+        if (currentPaidLots.size === 0) {
+          currentPaidLots = await fetchPaidLotNumbers();
+          setPaidLotNumbers(currentPaidLots);
+        }
+        analyzeLotCompletion(assignments, currentPaidLots);
       }
     } catch (err) {
       console.error('Error loading karigar assignments:', err);
@@ -528,9 +587,11 @@ export default function ThekedarPayment({ onBack, supervisor, onNavigate }) {
       
       lotGroups.forEach((assignments, lotNumber) => {
         const lotInfo = lotCompletionMap.get(lotNumber);
+        const normLot = normalizeLotNumber(lotNumber);
+        const isPaid = paidLotNumbers.has(normLot) || (lotInfo && (lotInfo.isPaid || paidLotNumbers.has(normalizeLotNumber(lotInfo.lotNumber))));
         
         // Only include lots that are fully completed AND NOT PAID
-        if (lotInfo && lotInfo.isFullyCompleted && !lotInfo.isPaid) {
+        if (lotInfo && lotInfo.isFullyCompleted && !isPaid) {
           const completedAssignments = assignments.filter(a => a.status === 'completed');
           
           if (completedAssignments.length > 0) {
@@ -609,9 +670,10 @@ export default function ThekedarPayment({ onBack, supervisor, onNavigate }) {
         lot.assignments.forEach(a => uniqueKarigars.add(normalizeName(a.karigarName)));
       });
       
-      const paidCount = Array.from(lotCompletionMap.values()).filter(lot => 
-        lot.isFullyCompleted && lot.isPaid
-      ).length;
+      const paidCount = Array.from(lotCompletionMap.values()).filter(lot => {
+        const normLot = normalizeLotNumber(lot.lotNumber);
+        return lot.isFullyCompleted && (lot.isPaid || paidLotNumbers.has(normLot));
+      }).length;
       
       const fullyCompletedCount = Array.from(lotCompletionMap.values()).filter(lot => lot.isFullyCompleted).length;
       
@@ -903,7 +965,7 @@ Available lots for payment: ${totalLots}`);
       
       const newPaidLots = new Set(paidLotNumbers);
       selectedLots.forEach(lotNumber => {
-        newPaidLots.add(lotNumber.toString());
+        newPaidLots.add(normalizeLotNumber(lotNumber));
       });
       setPaidLotNumbers(newPaidLots);
       
