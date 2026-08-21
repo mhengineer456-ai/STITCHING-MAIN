@@ -3,7 +3,8 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import {
   FiSearch, FiRefreshCw, FiAlertTriangle, FiUser, FiCalendar, FiX, FiCheck,
-  FiScissors, FiInfo, FiPackage, FiTag, FiGrid, FiArrowLeft, FiLoader, FiGlobe, FiUsers
+  FiScissors, FiInfo, FiPackage, FiTag, FiGrid, FiArrowLeft, FiLoader, FiGlobe, FiUsers,
+  FiShield, FiAward, FiHeart, FiCheckCircle, FiStar, FiUserCheck
 } from 'react-icons/fi';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -231,6 +232,7 @@ const translations = {
     colors: "Colors",
     sizes: "Sizes",
     remarks: "Remarks",
+    authorizedBy: "Authorized By",
 
     // Table
     cuttingMatrix: "Cutting Matrix",
@@ -316,6 +318,7 @@ const translations = {
     colors: "रंग",
     sizes: "साइज",
     remarks: "टिप्पणी",
+    authorizedBy: "ऑथराइज्ड व्यक्ति (Authorized By)",
 
     // Table
     cuttingMatrix: "कटिंग मैट्रिक्स",
@@ -536,6 +539,7 @@ async function checkLotEligibility(lotNo, supervisorName, signal) {
 
   let lotFound = false;
   let matchedSupervisorInSheet = '';
+  let matchedAuthorizedByInSheet = '';
   let matchingRow = null;
 
   for (const row of rows) {
@@ -543,10 +547,12 @@ async function checkLotEligibility(lotNo, supervisorName, signal) {
 
     const rowLot = norm(row[1]); // Col B: Lot Number
     const rowSupervisor = norm(row[8] || ''); // Col I: Stitching Supervisor
+    const rowAuth = norm(row[13] || ''); // Col N: Authorized By
 
     if (rowLot === cleanLot) {
       lotFound = true;
       matchedSupervisorInSheet = rowSupervisor;
+      matchedAuthorizedByInSheet = rowAuth;
       if (rowSupervisor.toLowerCase() === cleanSup) {
         matchingRow = row;
         break;
@@ -578,7 +584,8 @@ async function checkLotEligibility(lotNo, supervisorName, signal) {
       eligible: false,
       reason: 'supervisor_mismatch',
       matchedSupervisor: matchedSupervisorInSheet,
-      message: `Lot "${cleanLot}" is assigned to supervisor "${matchedSupervisorInSheet}" , not "${supervisorName}". Authorization denied.`
+      authorizedBy: matchedAuthorizedByInSheet,
+      message: `Lot "${cleanLot}" is assigned to supervisor "${matchedSupervisorInSheet}" (Authorized by "${matchedAuthorizedByInSheet}"), not "${supervisorName}". Authorization denied.`
     };
   }
 
@@ -587,6 +594,45 @@ async function checkLotEligibility(lotNo, supervisorName, signal) {
     reason: 'lot_not_found',
     message: `Lot "${cleanLot}" for Supervisor "${supervisorName}" is not present in the Stitching Issues Sheet.`
   };
+}
+
+async function fetchAuthorizedPersonForLot(lotNo, signal) {
+  if (!GOOGLE_API_KEY || !CREDENTIALS_STITCHING_ISSUES_SHEET_ID || !norm(lotNo)) return null;
+  const cleanLot = norm(lotNo);
+  try {
+    const rangeWithTab = encodeURIComponent(`${CREDENTIALS_STITCHING_ISSUES_TAB}!A2:N`);
+    let rows = [];
+    try {
+      rows = await fetchSheetDataCached(CREDENTIALS_STITCHING_ISSUES_SHEET_ID, rangeWithTab, signal);
+    } catch (e) {
+      const rangeFallback = encodeURIComponent('A2:N');
+      rows = await fetchSheetDataCached(CREDENTIALS_STITCHING_ISSUES_SHEET_ID, rangeFallback, signal).catch(() => []);
+    }
+    if (!rows || !rows.length) return null;
+    for (const row of rows) {
+      if (!row || row.length < 2) continue;
+      if (norm(row[1]) === cleanLot) {
+        return {
+          lotNo: cleanLot,
+          garmentType: norm(row[2] || ''),
+          fabric: norm(row[3] || ''),
+          style: norm(row[4] || ''),
+          brand: norm(row[5] || ''),
+          season: norm(row[6] || ''),
+          directStitching: norm(row[7] || ''),
+          supervisor: norm(row[8] || ''),
+          issueDate: norm(row[9] || ''),
+          totalPcs: norm(row[10] || ''),
+          partyName: norm(row[11] || ''),
+          specialRemarks: norm(row[12] || ''),
+          authorizedBy: norm(row[13] || '')
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Error fetching authorized person for lot:', err);
+  }
+  return null;
 }
 
 async function isLotAlreadyIssued(lotNo, signal) {
@@ -1631,6 +1677,7 @@ function findLotInIndex(indexData, lotNo) {
 async function generateIssuePdf(matrix, {
   issueDate,
   supervisor,
+  authorizedBy = '',
   manpower = '0',
   pendingLots = 0,
   pendingPcs = 0,
@@ -1799,6 +1846,23 @@ async function generateIssuePdf(matrix, {
         supToPrint += '…';
       }
       doc.text(supToPrint, s2InnerX + supLabelW + 4, s2Y);
+
+      s2Y += 16;
+      doc.setFont('times', 'bold'); doc.setFontSize(10);
+      const authLabel = 'Authorized By:';
+      doc.text(authLabel, s2InnerX, s2Y);
+      doc.setFont('times', 'bold'); doc.setFontSize(10);
+      const authText = (authorizedBy || matrix?.authorizedBy || '').trim() || '________';
+      const authLabelW = doc.getTextWidth(authLabel);
+      const authAvailableW = sectionW - (s2InnerX - s2X) - authLabelW - 12;
+      let authToPrint = authText;
+      if (doc.getTextWidth(authText) > authAvailableW) {
+        while (authToPrint.length && doc.getTextWidth(authToPrint + '…') > authAvailableW) {
+          authToPrint = authToPrint.slice(0, -1);
+        }
+        authToPrint += '…';
+      }
+      doc.text(authToPrint, s2InnerX + authLabelW + 4, s2Y);
     }
 
     if (currentPage === 1) {
@@ -1980,6 +2044,8 @@ async function generateIssuePdf(matrix, {
   if (currentPage === totalPages && afterTableY < H - 200) {
     await drawBottomSections(doc, afterTableY, W, H, CM2, matrix, {
       issueDate,
+      supervisor,
+      authorizedBy,
       manpower,
       pendingLots,
       pendingPcs,
@@ -1994,12 +2060,18 @@ async function generateIssuePdf(matrix, {
 
 async function drawBottomSections(doc, afterTableY, W, H, CM2, matrix, {
   issueDate = '',
+  supervisor = '',
+  authorizedBy = '',
   manpower = '0',
   pendingLots = 0,
   pendingPcs = 0,
   garmentTypeSummary = [],
   zipOrderDate = ''
 }) {
+  const authorizerRaw = (authorizedBy || matrix?.authorizedBy || 'Pintu').trim();
+  const authorizerUpper = (authorizerRaw || 'PINTU').toUpperCase();
+  const authorizerDisplay = titleCase(authorizerRaw || 'Pintu');
+
   const leftBoxH = 150;
   const leftBoxX = CM2;
   const leftBoxY = afterTableY;
@@ -2177,7 +2249,6 @@ async function drawBottomSections(doc, afterTableY, W, H, CM2, matrix, {
     const remarksText = String(matrix.remarks || '');
     const remarksLines = remarksText ? doc.splitTextToSize(remarksText, maxRemarksWidth) : [];
 
-    // Determine dynamic height based on text content (heading + lines + padding)
     const requiredRemarksH = remarksText ? (18 + remarksLines.length * 10) : baseZipBoxHeight;
     const zipBoxHeight = Math.max(baseZipBoxHeight, requiredRemarksH);
     const zipBoxY = stickerY - zipBoxHeight - 10;
@@ -2213,7 +2284,6 @@ async function drawBottomSections(doc, afterTableY, W, H, CM2, matrix, {
       doc.setTextColor(0, 0, 0);
     }
 
-    // SPECIAL REMARKS Box next to ZIP ORDER DATE
     const remarksBoxY = zipBoxY;
     const remarksBoxH = zipBoxHeight;
 
@@ -2266,13 +2336,11 @@ async function drawBottomSections(doc, afterTableY, W, H, CM2, matrix, {
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(18);
     const manpowerValue = String(manpower || '0');
-    const manpowerValueY = stickerY + manpowerHeaderH + (cardHeight - manpowerHeaderH) / 2 - 5;
-    doc.text(manpowerValue, manpowerX + cardWidth / 2, manpowerValueY, { align: 'center', baseline: 'middle' });
+    doc.text(manpowerValue, manpowerX + cardWidth / 2, stickerY + manpowerHeaderH + (cardHeight - manpowerHeaderH) / 2 - 5, { align: 'center', baseline: 'middle' });
 
     doc.setFont('times', 'normal');
     doc.setFontSize(7);
-    const subtitleY = stickerY + cardHeight - 10;
-    doc.text('Total Workers', manpowerX + cardWidth / 2, subtitleY, { align: 'center' });
+    doc.text('Total Workers', manpowerX + cardWidth / 2, stickerY + cardHeight - 10, { align: 'center' });
 
     const stitchX = manpowerX + cardWidth + cardGap;
     const stitchHeaderH = drawCard(stitchX, stickerY, cardWidth, cardHeight, 'STITCHING INSPECTION');
@@ -2373,7 +2441,7 @@ async function drawBottomSections(doc, afterTableY, W, H, CM2, matrix, {
 
     doc.setFont('times', 'bold');
     doc.setFontSize(9);
-    doc.text('Lot Allotment & Issue by Pintu', x + w / 2, y + 11, { align: 'center' });
+    doc.text(`Lot Allotment & Issue by ${authorizerDisplay}`, x + w / 2, y + 11, { align: 'center' });
 
     doc.setLineWidth(0.4);
     doc.line(x + 5, y + 14, x + w - 5, y + 14);
@@ -2384,14 +2452,13 @@ async function drawBottomSections(doc, afterTableY, W, H, CM2, matrix, {
 
     doc.setFont('times', 'italic');
     doc.setFontSize(7.5);
-    doc.text('Pintu Signature', x + w / 2, sigLineY + 8, { align: 'center' });
+    doc.text(`${authorizerDisplay} Signature`, x + w / 2, sigLineY + 8, { align: 'center' });
 
     doc.setFont('times', 'bold');
     doc.setFontSize(8);
     const displayPintuDate = printableDate(issueDate) || printableDate(todayLocalISO());
-    doc.text(`Pintu Issue Date: ${displayPintuDate}`, x + w / 2, y + h - 4, { align: 'center' });
+    doc.text(`${authorizerDisplay} Issue Date: ${displayPintuDate}`, x + w / 2, y + h - 4, { align: 'center' });
 
-    // Official CIRCULAR Seal Rubber Stamp (Visible from afar)
     try {
       const stampCanvas = document.createElement('canvas');
       stampCanvas.width = 220;
@@ -2407,19 +2474,16 @@ async function drawBottomSections(doc, afterTableY, W, H, CM2, matrix, {
       sCtx.strokeStyle = inkColor;
       sCtx.fillStyle = inkColor;
 
-      // Outer Thick Circle
       sCtx.lineWidth = 3.5;
       sCtx.beginPath();
       sCtx.arc(0, 0, 92, 0, 2 * Math.PI);
       sCtx.stroke();
 
-      // Inner Fine Circle
       sCtx.lineWidth = 1.2;
       sCtx.beginPath();
       sCtx.arc(0, 0, 85, 0, 2 * Math.PI);
       sCtx.stroke();
 
-      // Inner Dotted/Dashed Decorative Circle
       sCtx.lineWidth = 0.8;
       sCtx.beginPath();
       sCtx.arc(0, 0, 80, 0, 2 * Math.PI);
@@ -2428,7 +2492,6 @@ async function drawBottomSections(doc, afterTableY, W, H, CM2, matrix, {
       sCtx.textAlign = 'center';
       sCtx.textBaseline = 'middle';
 
-      // Top Curved Header Text: ★ STITCHING LOT ISSUE ★
       sCtx.font = 'bold 11px "Arial", sans-serif';
       const topText = "★ STITCHING LOT ISSUE ★";
       const topRadius = 68;
@@ -2447,8 +2510,7 @@ async function drawBottomSections(doc, afterTableY, W, H, CM2, matrix, {
         sCtx.restore();
       }
 
-      // Bottom Curved Subtext: PINTU SIR AUTHORIZED
-      const botText = "PINTU SIR AUTHORIZED";
+      const botText = `${authorizerUpper} AUTHORIZED`;
       const botRadius = 68;
       const botStart = Math.PI * 0.22;
       const botEnd = Math.PI * 0.78;
@@ -2465,20 +2527,18 @@ async function drawBottomSections(doc, afterTableY, W, H, CM2, matrix, {
         sCtx.restore();
       }
 
-      // Central Banner Box & Text
       sCtx.lineWidth = 1.6;
       sCtx.strokeRect(-76, -14, 152, 28);
       sCtx.font = '900 13px "Arial Black", "Arial", sans-serif';
       sCtx.fillText('★ AUTHORIZED ★', 0, 1);
 
-      // Date Subtext below Central Banner inside Circle
       sCtx.font = 'bold 10px "Courier New", monospace, sans-serif';
       sCtx.fillText(displayPintuDate, 0, 28);
 
       sCtx.restore();
 
       const stampDataUrl = stampCanvas.toDataURL('image/png');
-      const stampSize = 72; // size in PDF pt
+      const stampSize = 72;
       const stampX = x + (w - stampSize) / 2;
       const stampY = y + (h - stampSize) / 2;
       doc.addImage(stampDataUrl, 'PNG', stampX, stampY, stampSize, stampSize);
@@ -2502,9 +2562,9 @@ async function drawBottomSections(doc, afterTableY, W, H, CM2, matrix, {
   drawSigBoxWithLabel(sigStartX + sig1W + sigGap + sig2W + sigGap, sigBoxY, sig3W, sigBoxH, 'Completed Lot (Stitching Supervisor)');
 
   const hindiParagraphs = [
-    'यहाँ पिंटू सर के हस्ताक्षर एवं पिंटू इश्यू डेट (Pintu Issue Date) होना अनिवार्य है। उनके हस्ताक्षर और इश्यू डेट के बिना लॉट जारी नहीं किया जाएगा।',
-    'लॉट की क्वालिटी पिंटू सर से चेक कराना जरूरी है।',
-    'लॉट की क्वालिटी पिंटू सर से चेक कराए बिना लॉट की पेमेंट नहीं होगी।'
+    `यहाँ ${authorizerDisplay} सर के हस्ताक्षर एवं ${authorizerDisplay} इश्यू डेट (${authorizerDisplay} Issue Date) होना अनिवार्य है। उनके हस्ताक्षर और इश्यू डेट के बिना लॉट जारी नहीं किया जाएगा।`,
+    `लॉट की क्वालिटी ${authorizerDisplay} सर से चेक कराना जरूरी है।`,
+    `लॉट की क्वालिटी ${authorizerDisplay} सर से चेक कराए बिना लॉट की पेमेंट नहीं होगी।`
   ];
 
   try {
@@ -3396,6 +3456,14 @@ export default function IssueStitching() {
       const cachedMatrix = lotMatrixCache.get(cacheKey);
 
       if (cachedMatrix) {
+        const authDetails = await fetchAuthorizedPersonForLot(cachedMatrix.lotNumber, ctrl.signal);
+        if (authDetails) {
+          cachedMatrix.authorizedBy = authDetails.authorizedBy;
+          cachedMatrix.partyName = authDetails.partyName;
+          cachedMatrix.specialRemarks = authDetails.specialRemarks;
+          cachedMatrix.assignedSupervisor = authDetails.supervisor;
+        }
+
         setMatrix(cachedMatrix);
         const isIssued = await isLotAlreadyIssued(cachedMatrix.lotNumber, ctrl.signal);
         setAlreadyIssued(isIssued);
@@ -3407,6 +3475,15 @@ export default function IssueStitching() {
         }
       } else {
         const data = await fetchLotMatrixViaSheetsApi(norm(lotInput), ctrl.signal);
+
+        const authDetails = await fetchAuthorizedPersonForLot(data?.lotNumber || lotInput, ctrl.signal);
+        if (authDetails && data) {
+          data.authorizedBy = authDetails.authorizedBy;
+          data.partyName = authDetails.partyName;
+          data.specialRemarks = authDetails.specialRemarks;
+          data.assignedSupervisor = authDetails.supervisor;
+        }
+
         setMatrix(data);
         const isIssued = await isLotAlreadyIssued(data.lotNumber, ctrl.signal);
         setAlreadyIssued(isIssued);
@@ -3472,6 +3549,12 @@ export default function IssueStitching() {
 
         try {
           const data = await fetchLotMatrixViaSheetsApi(norm(eligibilityLot), ctrl.signal);
+          if (data) {
+            data.authorizedBy = res.authorizedBy;
+            data.partyName = res.partyName;
+            data.specialRemarks = res.specialRemarks;
+            data.assignedSupervisor = res.supervisor;
+          }
           setMatrix(data);
           const isIssued = await isLotAlreadyIssued(data.lotNumber, ctrl.signal);
           setAlreadyIssued(isIssued);
@@ -3610,6 +3693,7 @@ export default function IssueStitching() {
         await generateIssuePdf(matrix, {
           issueDate,
           supervisor,
+          authorizedBy: verifiedLotData?.authorizedBy || matrix?.authorizedBy || '',
           manpower: attendanceCount || '0',
           pendingLots: pendingData.pendingLots || 0,
           pendingPcs: pendingData.pendingPcs || 0,
@@ -3653,6 +3737,7 @@ export default function IssueStitching() {
         await generateIssuePdf(matrix, {
           issueDate,
           supervisor,
+          authorizedBy: verifiedLotData?.authorizedBy || matrix?.authorizedBy || '',
           manpower: attendanceCount || '0',
           pendingLots: 0,
           pendingPcs: 0,
@@ -3736,26 +3821,114 @@ export default function IssueStitching() {
               </BtnRow>
             </Form>
 
-            <div style={{ marginTop: '16px', padding: '12px 18px', background: isVerified ? '#f0fdf4' : '#eff6ff', borderRadius: '12px', border: `1px solid ${isVerified ? '#bbf7d0' : '#bfdbfe'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', color: isVerified ? '#166534' : '#1e40af', fontWeight: '600' }}>
+            <div style={{
+              marginTop: '16px',
+              padding: '14px 20px',
+              background: isVerified
+                ? 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)'
+                : 'linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%)',
+              borderRadius: '16px',
+              border: `1.5px solid ${isVerified ? '#86efac' : '#93c5fd'}`,
+              boxShadow: isVerified
+                ? '0 4px 15px rgba(22, 163, 74, 0.08)'
+                : '0 4px 15px rgba(37, 99, 235, 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '14px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 {isVerified ? (
                   <>
-                    <FiCheck style={{ color: '#16a34a', fontSize: '18px' }} />
-                    <span>Authorized Lot: <strong>{eligibilityLot}</strong> | Supervisor: <strong>{eligibilitySupervisor}</strong></span>
+                    <div style={{
+                      background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
+                    }}>
+                      <FiCheck style={{ fontSize: '18px' }} />
+                    </div>
+                    <div style={{ fontSize: '0.92rem', color: '#14532d' }}>
+                      <span style={{ fontWeight: '700' }}>Verified Authorized Lot:</span>{' '}
+                      <strong style={{ color: '#0f172a', background: '#dcfce7', padding: '2px 8px', borderRadius: '6px' }}>#{eligibilityLot}</strong>
+                      <span style={{ margin: '0 8px', color: '#86efac' }}>|</span>
+                      <span>Supervisor: <strong style={{ color: '#0f172a' }}>{eligibilitySupervisor}</strong></span>
+                      {(verifiedLotData?.authorizedBy || matrix?.authorizedBy) && (
+                        <>
+                          <span style={{ margin: '0 8px', color: '#86efac' }}>|</span>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                            color: '#92400e',
+                            border: '1px solid #f59e0b',
+                            padding: '3px 10px',
+                            borderRadius: '20px',
+                            fontWeight: '700',
+                            fontSize: '0.82rem',
+                            boxShadow: '0 2px 6px rgba(245, 158, 11, 0.15)'
+                          }}>
+                            <FiAward style={{ color: '#d97706', fontSize: '14px' }} />
+                            Authorized By: {verifiedLotData?.authorizedBy || matrix?.authorizedBy}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <>
-                    <FiAlertTriangle style={{ color: '#2563eb', fontSize: '18px' }} />
-                    <span>Lot authorization required from Stitching Issues Sheet before issuing.</span>
+                    <div style={{
+                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)'
+                    }}>
+                      <FiShield style={{ fontSize: '18px' }} />
+                    </div>
+                    <div style={{ fontSize: '0.9rem', color: '#1e40af', fontWeight: '500' }}>
+                      <span>Lot authorization verification required from Stitching Issues Sheet before issuing.</span>
+                      {(matrix?.authorizedBy || verifiedLotData?.authorizedBy) && (
+                        <div style={{ marginTop: '4px', fontSize: '0.83rem', color: '#0369a1', fontWeight: '600' }}>
+                          ℹ️ Sheet Record Found: Authorized by <strong>{matrix?.authorizedBy || verifiedLotData?.authorizedBy}</strong> for Supervisor <strong>{matrix?.assignedSupervisor || verifiedLotData?.supervisor}</strong>
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => setShowEligibilityModal(true)}
-                style={{ padding: '6px 14px', borderRadius: '20px', border: `1px solid ${isVerified ? '#86efac' : '#93c5fd'}`, background: 'white', color: isVerified ? '#15803d' : '#1e40af', fontWeight: '600', fontSize: '0.8rem', cursor: 'pointer' }}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '20px',
+                  border: `1.5px solid ${isVerified ? '#16a34a' : '#2563eb'}`,
+                  background: isVerified ? 'white' : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  color: isVerified ? '#15803d' : 'white',
+                  fontWeight: '700',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                  transition: 'all 0.2s ease'
+                }}
               >
-                {isVerified ? 'Change / Re-verify Lot' : 'Verify Lot Authorization'}
+                <FiShield style={{ fontSize: '15px' }} />
+                {isVerified ? 'Re-verify / Change Authorization' : 'Verify Lot Authorization'}
               </button>
             </div>
           </SearchSection>
@@ -3798,6 +3971,34 @@ export default function IssueStitching() {
                     <InfoIcon><FiTag /></InfoIcon>
                     <div><InfoLabel>{t.garmentType}</InfoLabel><InfoValue>{matrix.garmentType || '—'}</InfoValue></div>
                   </InfoItem>
+                  <InfoItem style={{ gridColumn: 'span 2', background: 'linear-gradient(135deg, #fffbebf5 0%, #fef3c7f5 100%)', border: '1.5px solid #fde68a', borderRadius: '12px', padding: '10px 14px' }}>
+                    <InfoIcon style={{ background: '#f59e0b', color: 'white' }}>
+                      <FiAward />
+                    </InfoIcon>
+                    <div>
+                      <InfoLabel style={{ color: '#92400e', fontWeight: '700' }}>Authorized By (Spreadsheet Record)</InfoLabel>
+                      <InfoValue style={{ color: '#78350f', fontWeight: '800', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{verifiedLotData?.authorizedBy || matrix?.authorizedBy || 'Pending Verification'}</span>
+                        {(verifiedLotData?.authorizedBy || matrix?.authorizedBy) && (
+                          <span style={{ fontSize: '0.72rem', background: '#16a34a', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: '700' }}>
+                            VERIFIED
+                          </span>
+                        )}
+                      </InfoValue>
+                    </div>
+                  </InfoItem>
+                  {(verifiedLotData?.partyName || matrix?.partyName) && (
+                    <InfoItem>
+                      <InfoIcon><FiUserCheck /></InfoIcon>
+                      <div><InfoLabel>Party Name</InfoLabel><InfoValue>{verifiedLotData?.partyName || matrix?.partyName}</InfoValue></div>
+                    </InfoItem>
+                  )}
+                  {(verifiedLotData?.specialRemarks || matrix?.specialRemarks) && (
+                    <InfoItem>
+                      <InfoIcon><FiTag /></InfoIcon>
+                      <div><InfoLabel>Special Remarks</InfoLabel><InfoValue>{verifiedLotData?.specialRemarks || matrix?.specialRemarks}</InfoValue></div>
+                    </InfoItem>
+                  )}
                 </InfoGrid>
                 <SummaryCard>
                   <SummaryItem><SummaryLabel>{t.totalPieces}</SummaryLabel><SummaryValue>{matrix.totals.grand}</SummaryValue></SummaryItem>
@@ -3992,6 +4193,42 @@ export default function IssueStitching() {
               </DialogHeader>
 
               <DialogContent>
+                <div style={{
+                  margin: '-4px 0 18px 0',
+                  padding: '16px 20px',
+                  background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+                  border: '1.5px solid #6ee7b7',
+                  borderRadius: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.12)'
+                }}>
+                  <div style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '22px',
+                    flexShrink: 0,
+                    boxShadow: '0 4px 10px rgba(5, 150, 105, 0.25)'
+                  }}>
+                    <FiHeart />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: '800', color: '#065f46', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>Lot #{matrix?.lotNumber} Official Stitching Issuance</span>
+                    </h4>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#047857', lineHeight: '1.4' }}>
+                      Authorized with gratitude by <strong style={{ color: '#064e3b', background: '#a7f3d0', padding: '1px 7px', borderRadius: '5px' }}>{verifiedLotData?.authorizedBy || matrix?.authorizedBy || 'Authorized Official'}</strong> for Supervisor <strong style={{ color: '#064e3b' }}>{supervisor}</strong>.
+                    </p>
+                  </div>
+                </div>
+
                 <SimpleField>
                   <FieldLabel><FiCalendar /> {t.dateOfIssue}</FieldLabel>
                   <input
@@ -4041,6 +4278,33 @@ export default function IssueStitching() {
                       border: '2px solid #cbd5e1',
                       background: '#f8fafc',
                       color: '#0f172a',
+                      fontWeight: 'bold',
+                      outline: 'none',
+                      fontSize: '1rem',
+                      cursor: 'not-allowed',
+                      width: '100%'
+                    }}
+                  />
+                </SimpleField>
+
+                <SimpleField>
+                  <FieldLabel>
+                    <FiAward style={{ color: '#d97706' }} /> Authorized By (Issuer / Approver)
+                    <span style={{ fontSize: '0.75rem', color: '#059669', marginLeft: '8px', fontWeight: 'bold' }}>
+                      🔒 (Verified from Sheet)
+                    </span>
+                  </FieldLabel>
+                  <input
+                    type="text"
+                    value={verifiedLotData?.authorizedBy || matrix?.authorizedBy || 'Authorized Officer'}
+                    disabled
+                    readOnly
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '12px',
+                      border: '2px solid #fde68a',
+                      background: '#fffbebf5',
+                      color: '#92400e',
                       fontWeight: 'bold',
                       outline: 'none',
                       fontSize: '1rem',
@@ -4121,15 +4385,22 @@ export default function IssueStitching() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.3 }}
+                    style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', border: '2px solid #86efac' }}
                   >
                     <div className="success-top">
-                      <div className="success-icon-badge">
+                      <div className="success-icon-badge" style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' }}>
                         <FiCheck />
                       </div>
                       <div>
-                        <h4 className="success-title">🎉 Issue Confirmed Successfully!</h4>
-                        <p className="success-desc">
+                        <h4 className="success-title" style={{ color: '#14532d', fontSize: '1.15rem' }}>
+                          🎉 Lot Issued Successfully with Gratitude!
+                        </h4>
+                        <p className="success-desc" style={{ color: '#166534', marginTop: '4px' }}>
                           Lot <strong>#{matrix?.lotNumber}</strong> has been assigned to <strong>{supervisor}</strong>.
+                          <br />
+                          <span style={{ fontWeight: '700', color: '#b45309', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                            <FiAward /> Authorized By: {verifiedLotData?.authorizedBy || matrix?.authorizedBy || 'Authorized Officer'}
+                          </span>
                         </p>
                       </div>
                     </div>
@@ -4247,12 +4518,28 @@ export default function IssueStitching() {
                   )}
 
                   {isVerified && verifiedLotData && (
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '14px 16px', color: '#15803d', fontSize: '0.9rem' }}>
-                      <div style={{ fontWeight: '700', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <FiCheck style={{ fontSize: '18px' }} /> Lot Authorized for Stitching Issue!
+                    <div style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', border: '2px solid #86efac', borderRadius: '16px', padding: '16px 20px', color: '#15803d' }}>
+                      <div style={{ fontWeight: '800', fontSize: '1rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', color: '#14532d' }}>
+                        <FiCheckCircle style={{ color: '#16a34a', fontSize: '20px' }} />
+                        <span>Lot Authorized for Stitching Issue!</span>
                       </div>
-                      <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>
-                        {verifiedLotData.garmentType} | {verifiedLotData.fabric} | Total Pcs: {verifiedLotData.totalPcs}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.85rem', marginTop: '8px' }}>
+                        <div style={{ background: 'white', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                          <span style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Authorized By</span>
+                          <strong style={{ color: '#b45309', fontSize: '0.95rem' }}>{verifiedLotData.authorizedBy || '—'}</strong>
+                        </div>
+                        <div style={{ background: 'white', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                          <span style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Supervisor</span>
+                          <strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>{verifiedLotData.supervisor || '—'}</strong>
+                        </div>
+                        <div style={{ background: 'white', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                          <span style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Fabric & Style</span>
+                          <strong style={{ color: '#0f172a' }}>{verifiedLotData.fabric} ({verifiedLotData.style})</strong>
+                        </div>
+                        <div style={{ background: 'white', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                          <span style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Total Quantity</span>
+                          <strong style={{ color: '#0f172a' }}>{verifiedLotData.totalPcs} Pcs</strong>
+                        </div>
                       </div>
                     </div>
                   )}
